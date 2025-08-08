@@ -103,6 +103,37 @@
     display: block;
 }
 
+/* Contadores y metadatos */
+.kick-wp-viewer-count {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #666;
+    font-size: 13px;
+}
+
+.kick-wp-viewer-count .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #606a73;
+}
+
+.kick-wp-category-tag {
+    display: inline-block;
+    background: #f0f0f0;
+    color: #666;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin: 3px;
+}
+
+/* Settings section spacing */
+.form-table + h2 {
+    margin-top: 2em;
+}
+
 /* Responsive */
 @media screen and (max-width: 782px) {
     .kick-wp-streams-grid,
@@ -113,5 +144,9 @@
     #settings .form-table th {
         width: 100%;
         display: block;
+    }
+
+    .kick-wp-viewer-count {
+        justify-content: flex-start;
     }
 }

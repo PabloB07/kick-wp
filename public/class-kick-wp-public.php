@@ -95,20 +95,45 @@ class Kick_Wp_Public {
 	 * @return string HTML del shortcode
 	 */
 	public function render_streams_shortcode($atts) {
-		// Inicializar la API
-		$api = new Kick_Wp_Api();
-		
-		// Obtener los streams destacados
-		$featured_streams = $api->get_featured_streams();
-		
-		// Iniciar el buffer de salida
-		ob_start();
-		
-		// Incluir la plantilla
-		include plugin_dir_path( dirname( __FILE__ ) ) . 'public/partials/kick-wp-public-display.php';
-		
-		// Retornar el contenido del buffer
-		return ob_get_clean();
+		// Procesar atributos
+		$atts = shortcode_atts(array(
+			'count' => get_option('kick_wp_default_stream_count', 4),
+			'category' => '',
+			'layout' => get_option('kick_wp_layout_style', 'grid'),
+			'streamer' => '' // Nuevo atributo para streamer específico
+		), $atts, 'kick_wp_streams');
+
+		try {
+			// Inicializar la API
+			if (!isset($this->api)) {
+				$this->api = new Kick_Wp_Api();
+			}
+			
+			// Si se especifica un streamer, obtener su stream
+			if (!empty($atts['streamer'])) {
+				$streamer = sanitize_text_field($atts['streamer']);
+				$stream = $this->api->get_streamer($streamer);
+				$streams = array('data' => array($stream));
+			} else {
+				// Obtener los streams destacados
+				$streams = $this->api->get_featured_streams(array(
+					'limit' => intval($atts['count']),
+					'category' => sanitize_text_field($atts['category'])
+				));
+			}
+			
+			// Incluir la plantilla
+			require_once plugin_dir_path(dirname(__FILE__)) . 'public/partials/kick-wp-shortcode.php';
+			return kick_wp_display_streams_html($streams, $atts);
+
+		} catch (Exception $e) {
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('Kick WP - Error en shortcode: ' . $e->getMessage());
+			}
+			return '<p class="kick-wp-error">' . 
+				esc_html__('Error al cargar los streams.', 'kick-wp') . 
+				'</p>';
+		}
 	}
 
 }

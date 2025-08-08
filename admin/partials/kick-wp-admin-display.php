@@ -30,17 +30,32 @@ if (!defined('WPINC')) {
     <div id="streams" class="tab-content active">
         <h3><?php _e('Streams Destacados', 'kick-wp'); ?></h3>
         <div class="kick-wp-streams-grid">
-            <?php if (is_array($featured_streams) && !empty($featured_streams)): ?>
-                <?php foreach ($featured_streams as $stream): ?>
+            <?php if (isset($featured_streams['data']) && is_array($featured_streams['data']) && !empty($featured_streams['data'])): ?>
+                <?php foreach ($featured_streams['data'] as $stream): ?>
                     <div class="kick-wp-stream-card">
-                        <?php if (isset($stream['thumbnail'])): ?>
-                            <img src="<?php echo esc_url($stream['thumbnail']); ?>" alt="<?php echo esc_attr($stream['title']); ?>">
+                        <?php if (isset($stream['channel']) && isset($stream['channel']['avatar'])): ?>
+                            <img src="<?php echo esc_url($stream['channel']['avatar']); ?>" 
+                                 alt="<?php echo esc_attr($stream['channel']['username']); ?>">
                         <?php endif; ?>
-                        <h4><?php echo esc_html($stream['title']); ?></h4>
-                        <p><?php echo esc_html($stream['viewer_count']); ?> <?php _e('espectadores', 'kick-wp'); ?></p>
-                        <a href="<?php echo esc_url('https://kick.com/' . $stream['username']); ?>" class="kick-wp-watch-button" target="_blank">
-                            <?php _e('Ver Stream', 'kick-wp'); ?>
-                        </a>
+                        
+                        <?php if (isset($stream['channel']) && isset($stream['channel']['username'])): ?>
+                            <h4><?php echo esc_html($stream['channel']['username']); ?></h4>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($stream['viewer_count'])): ?>
+                            <p><?php printf(
+                                esc_html__('%s espectadores', 'kick-wp'),
+                                number_format_i18n($stream['viewer_count'])
+                            ); ?></p>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($stream['channel']) && isset($stream['channel']['username'])): ?>
+                            <a href="<?php echo esc_url('https://kick.com/' . $stream['channel']['username']); ?>" 
+                               class="kick-wp-watch-button" 
+                               target="_blank">
+                                <?php _e('Ver Stream', 'kick-wp'); ?>
+                            </a>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
@@ -52,15 +67,23 @@ if (!defined('WPINC')) {
     <div id="categories" class="tab-content">
         <h3><?php _e('Categorías Disponibles', 'kick-wp'); ?></h3>
         <div class="kick-wp-categories-grid">
-            <?php if (is_array($categories) && !empty($categories)): ?>
-                <?php foreach ($categories as $category): ?>
+            <?php if (isset($categories['data']) && is_array($categories['data']) && !empty($categories['data'])): ?>
+                <?php foreach ($categories['data'] as $category): ?>
                     <div class="kick-wp-category-card">
-                        <?php if (isset($category['image'])): ?>
-                            <img src="<?php echo esc_url($category['image']); ?>" alt="<?php echo esc_attr($category['name']); ?>">
+                        <?php if (isset($category['icon'])): ?>
+                            <img src="<?php echo esc_url($category['icon']); ?>" 
+                                 alt="<?php echo esc_attr($category['name']); ?>">
                         <?php endif; ?>
-                        <h4><?php echo esc_html($category['name']); ?></h4>
-                        <?php if (isset($category['viewer_count'])): ?>
-                            <p><?php echo esc_html($category['viewer_count']); ?> <?php _e('espectadores', 'kick-wp'); ?></p>
+                        
+                        <?php if (isset($category['name'])): ?>
+                            <h4><?php echo esc_html($category['name']); ?></h4>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($category['viewers'])): ?>
+                            <p><?php printf(
+                                esc_html__('%s espectadores', 'kick-wp'),
+                                number_format_i18n($category['viewers'])
+                            ); ?></p>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>

@@ -21,12 +21,49 @@ Este plugin de WordPress permite integrar streams de Kick.com en tu sitio web de
 
 ## Uso
 
-### Shortcode Básico
+### Shortcodes
 
-Para mostrar los streams destacados en cualquier página o post, usa el shortcode:
-
+#### Shortcode Básico
+Para mostrar los streams destacados en cualquier página o post:
 ```
 [kick_wp_streams]
+```
+
+#### Mostrar Streamer Específico
+Para mostrar un streamer en particular:
+```
+[kick_wp_streams streamer="nombredelstreamer"]
+```
+
+#### Opciones Avanzadas
+El shortcode acepta varios parámetros:
+```
+[kick_wp_streams 
+    streamer="auronplay"      # Nombre del streamer (opcional)
+    count="4"                 # Número de streams a mostrar
+    category="gaming"         # Categoría específica
+    layout="grid"            # Estilo de visualización (grid/list)
+]
+```
+
+### Uso con PHP
+Para desarrolladores que quieran integrar streams en sus temas:
+```php
+<?php
+if (function_exists('kick_wp_display_streams')) {
+    // Mostrar un streamer específico
+    kick_wp_display_streams(array(
+        'streamer' => 'auronplay'
+    ));
+
+    // O mostrar streams destacados con opciones
+    kick_wp_display_streams(array(
+        'count' => 4,
+        'category' => 'gaming',
+        'layout' => 'grid'
+    ));
+}
+?>
 ```
 
 ### Panel de Administración
@@ -94,26 +131,48 @@ kick-wp/
 
 ```php
 // Filtrar streams antes de mostrarlos
-apply_filters('kick_wp_streams_data', $streams);
+apply_filters('kick_wp_streams_data', $streams, $args);
+
+// Filtrar datos de un streamer específico
+apply_filters('kick_wp_streamer_data', $streamer_data, $username);
 
 // Filtrar categorías
 apply_filters('kick_wp_categories_data', $categories);
 
 // Acción antes de mostrar streams
-do_action('kick_wp_before_streams');
+do_action('kick_wp_before_streams', $args);
 
 // Acción después de mostrar streams
-do_action('kick_wp_after_streams');
+do_action('kick_wp_after_streams', $args);
+
+// Acción cuando se muestra un streamer específico
+do_action('kick_wp_show_streamer', $username);
 ```
 
 ### CSS Personalizado
 
 Puedes sobrescribir los estilos por defecto usando las siguientes clases:
 
+#### Contenedores
 - `.kick-wp-container`: Contenedor principal
-- `.kick-wp-streams-grid`: Grid de streams
+- `.kick-wp-streams-grid`: Vista en cuadrícula
+- `.kick-wp-streams-list`: Vista en lista
+
+#### Tarjetas de Stream
 - `.kick-wp-stream-card`: Tarjeta individual de stream
+- `.kick-wp-stream-thumbnail`: Contenedor de la miniatura
+- `.kick-wp-stream-info`: Contenedor de información
+- `.kick-wp-stream-title`: Título del stream
+- `.kick-wp-stream-meta`: Metadatos del stream
+
+#### Elementos Informativos
+- `.kick-wp-viewer-count`: Contador de espectadores
+- `.kick-wp-category-tag`: Etiqueta de categoría
 - `.kick-wp-watch-button`: Botón de "Ver Stream"
+
+#### Estados y Mensajes
+- `.kick-wp-error`: Mensajes de error
+- `.kick-wp-no-streams`: Mensaje cuando no hay streams
 
 ## Internacionalización
 

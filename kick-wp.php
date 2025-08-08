@@ -1,4 +1,4 @@
-<?php
+<?php defined('ABSPATH') || exit;
 /**
  * The plugin bootstrap file
  *
@@ -42,8 +42,18 @@ define( 'KICK_WP_URL', plugin_dir_url( __FILE__ ) );
  * This action is documented in includes/class-kick-wp-activator.php
  */
 function activate_kick_wp() {
-	require_once plugin_dir_path( __FILE__ ) . 'includes/class-kick-wp-activator.php';
-	Kick_Wp_Activator::activate();
+    // Prevenir salida durante la activación
+    ob_start();
+    
+    try {
+        require_once plugin_dir_path( __FILE__ ) . 'includes/class-kick-wp-activator.php';
+        Kick_Wp_Activator::activate();
+    } catch (Exception $e) {
+        error_log('Error activando Kick WP: ' . $e->getMessage());
+    }
+    
+    // Limpiar cualquier salida buffereada
+    ob_end_clean();
 }
 
 /**

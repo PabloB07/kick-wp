@@ -141,7 +141,7 @@ class Kick_Wp_Admin {
 	 * Registra las opciones del plugin
 	 */
 	public function register_settings() {
-		// Registrar configuraciones
+		// Configuraciones generales
 		register_setting(
 			'kick_wp_options',
 			'kick_wp_cache_duration',
@@ -172,6 +172,52 @@ class Kick_Wp_Admin {
 				'description' => 'Actualización automática',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'default' => true
+			)
+		);
+
+		// Configuraciones de visualización
+		register_setting(
+			'kick_wp_options',
+			'kick_wp_layout_style',
+			array(
+				'type' => 'string',
+				'description' => 'Estilo de visualización',
+				'sanitize_callback' => 'sanitize_text_field',
+				'default' => 'grid'
+			)
+		);
+
+		register_setting(
+			'kick_wp_options',
+			'kick_wp_show_viewer_count',
+			array(
+				'type' => 'boolean',
+				'description' => 'Mostrar contador de espectadores',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default' => true
+			)
+		);
+
+		register_setting(
+			'kick_wp_options',
+			'kick_wp_show_categories',
+			array(
+				'type' => 'boolean',
+				'description' => 'Mostrar categorías en streams',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default' => true
+			)
+		);
+
+		// Configuraciones de shortcode
+		register_setting(
+			'kick_wp_options',
+			'kick_wp_default_stream_count',
+			array(
+				'type' => 'integer',
+				'description' => 'Número predeterminado de streams en shortcode',
+				'sanitize_callback' => array($this, 'sanitize_stream_count'),
+				'default' => 4
 			)
 		);
 
@@ -229,6 +275,7 @@ class Kick_Wp_Admin {
 	 * Añade el menú de administración
 	 */
 	public function add_plugin_admin_menu() {
+		// Menú principal
 		add_menu_page(
 			__('Kick WP', 'kick-wp'),
 			__('Kick WP', 'kick-wp'),
@@ -237,6 +284,34 @@ class Kick_Wp_Admin {
 			array($this, 'display_plugin_admin_page'),
 			'dashicons-video-alt3',
 			30
+		);
+
+		// Submenús
+		add_submenu_page(
+			$this->plugin_name,
+			__('Streams Destacados', 'kick-wp'),
+			__('Streams Destacados', 'kick-wp'),
+			'manage_options',
+			$this->plugin_name,
+			array($this, 'display_plugin_admin_page')
+		);
+
+		add_submenu_page(
+			$this->plugin_name,
+			__('Categorías', 'kick-wp'),
+			__('Categorías', 'kick-wp'),
+			'manage_options',
+			$this->plugin_name . '-categories',
+			array($this, 'display_categories_page')
+		);
+
+		add_submenu_page(
+			$this->plugin_name,
+			__('Configuración', 'kick-wp'),
+			__('Configuración', 'kick-wp'),
+			'manage_options',
+			$this->plugin_name . '-settings',
+			array($this, 'display_settings_page')
 		);
 	}
 
@@ -252,22 +327,48 @@ class Kick_Wp_Admin {
 	/**
 	 * Muestra la página de administración
 	 */
+	/**
+	 * Muestra la página principal de administración
+	 */
 	public function display_plugin_admin_page() {
 		try {
 			if (!isset($this->api)) {
 				$this->api = new Kick_Wp_Api();
 			}
 
-			// Obtener datos
+			// Obtener datos y asegurar la estructura correcta
 			$featured_streams = $this->api->get_featured_streams();
 			$categories = $this->api->get_categories();
 
-			// Si no hay datos, inicializar arrays vacíos
-			if (empty($featured_streams)) {
-				$featured_streams = array('data' => array());
+			// Asegurar que los datos tengan la estructura correcta
+			$featured_streams = is_array($featured_streams) ? $featured_streams : array('data' => array());
+			$categories = is_array($categories) ? $categories : array('data' => array());
+
+			// Asegurar que 'data' existe en ambos arrays
+			if (!isset($featured_streams['data'])) {
+				$featured_streams['data'] = array();
 			}
-			if (empty($categories)) {
-				$categories = array('data' => array());
+			if (!isset($categories['data'])) {
+				$categories['data'] = array();
+			}
+
+			// Verificar si hay errores
+			if (isset($featured_streams['error'])) {
+				add_settings_error(
+					'kick_wp_messages',
+					'kick_wp_featured_error',
+					$featured_streams['error'],
+					'error'
+				);
+			}
+
+			if (isset($categories['error'])) {
+				add_settings_error(
+					'kick_wp_messages',
+					'kick_wp_categories_error',
+					$categories['error'],
+					'error'
+				);
 			}
 
 			// Incluir la plantilla
@@ -277,6 +378,50 @@ class Kick_Wp_Admin {
 				esc_html__('Error al cargar la página de administración: ', 'kick-wp') . 
 				esc_html($e->getMessage()) . '</p></div>';
 		}
+	}
+
+	/**
+	 * Muestra la página de categorías
+	 */
+	public function display_categories_page() {
+		try {
+			if (!isset($this->api)) {
+				$this->api = new Kick_Wp_Api();
+			}
+
+			// Obtener categorías
+			$categories = $this->api->get_categories();
+			$categories = is_array($categories) ? $categories : array('data' => array());
+
+			if (!isset($categories['data'])) {
+				$categories['data'] = array();
+			}
+
+			// Verificar errores
+			if (isset($categories['error'])) {
+				add_settings_error(
+					'kick_wp_messages',
+					'kick_wp_categories_error',
+					$categories['error'],
+					'error'
+				);
+			}
+
+			// Incluir la plantilla
+			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/partials/kick-wp-categories-display.php';
+		} catch (Exception $e) {
+			echo '<div class="error"><p>' . 
+				esc_html__('Error al cargar la página de categorías: ', 'kick-wp') . 
+				esc_html($e->getMessage()) . '</p></div>';
+		}
+	}
+
+	/**
+	 * Muestra la página de configuración
+	 */
+	public function display_settings_page() {
+		// Incluir la plantilla
+		require_once plugin_dir_path(dirname(__FILE__)) . 'admin/partials/kick-wp-settings-display.php';
 	}
 
 }

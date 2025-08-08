@@ -68,6 +68,50 @@ class Kick_Wp_Api {
     }
 
     /**
+     * Obtiene la información de un streamer específico
+     * 
+     * @param string $username Nombre de usuario del streamer
+     * @return array Datos del streamer
+     */
+    public function get_streamer($username) {
+        $cache_key = 'kick_wp_streamer_' . sanitize_key($username);
+        $cached = get_transient($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        $response = wp_remote_get($this->api_base_url . '/channels/' . urlencode($username));
+        
+        if (is_wp_error($response)) {
+            return array(
+                'error' => 'Error al obtener datos del streamer',
+                'data' => array()
+            );
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if (is_null($data)) {
+            return array(
+                'error' => 'Error al decodificar la respuesta',
+                'data' => array()
+            );
+        }
+
+        // Formatear los datos para mantener consistencia
+        $formatted_data = array(
+            'data' => array($data)
+        );
+
+        $cache_duration = get_option('kick_wp_cache_duration', 300);
+        set_transient($cache_key, $formatted_data, $cache_duration);
+        
+        return $formatted_data;
+    }
+
+    /**
      * Obtiene los streams destacados
      *
      * @return array|WP_Error Array de streams o WP_Error en caso de error
@@ -96,11 +140,17 @@ class Kick_Wp_Api {
                 'data' => array()
             );
         }
+
+        // Asegurarse de que la estructura sea correcta
+        $formatted_data = array(
+            'data' => isset($data['data']) ? $data['data'] : array(),
+            'meta' => isset($data['meta']) ? $data['meta'] : array()
+        );
         
         $cache_duration = get_option('kick_wp_cache_duration', 300);
-        set_transient('kick_wp_featured_streams', $data, $cache_duration);
+        set_transient('kick_wp_featured_streams', $formatted_data, $cache_duration);
         
-        return $data;
+        return $formatted_data;
     }
 
     /**
@@ -133,9 +183,15 @@ class Kick_Wp_Api {
             );
         }
 
+        // Asegurarse de que la estructura sea correcta
+        $formatted_data = array(
+            'data' => isset($data['data']) ? $data['data'] : array(),
+            'meta' => isset($data['meta']) ? $data['meta'] : array()
+        );
+
         $cache_duration = get_option('kick_wp_cache_duration', 300);
-        set_transient('kick_wp_categories', $data, $cache_duration);
+        set_transient('kick_wp_categories', $formatted_data, $cache_duration);
         
-        return $data;
+        return $formatted_data;
     }
 }
