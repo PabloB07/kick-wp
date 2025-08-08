@@ -71,36 +71,44 @@ class Kick_Wp_Api {
     /**
      * Obtiene los streams destacados
      *
-     * @return WP_REST_Response
+     * @return array|WP_Error Array de streams o WP_Error en caso de error
      */
     public function get_featured_streams() {
         $response = wp_remote_get($this->api_base_url . '/channels/featured');
         
         if (is_wp_error($response)) {
-            return new WP_REST_Response(array(
-                'error' => 'Error al obtener streams destacados'
-            ), 500);
+            return new WP_Error('api_error', 'Error al obtener streams destacados');
         }
 
         $body = wp_remote_retrieve_body($response);
-        return new WP_REST_Response(json_decode($body), 200);
+        $data = json_decode($body, true);
+        
+        if (is_null($data)) {
+            return new WP_Error('api_error', 'Error al decodificar la respuesta');
+        }
+        
+        return $data;
     }
 
     /**
      * Obtiene las categorías disponibles
      *
-     * @return WP_REST_Response
+     * @return array|WP_Error Array de categorías o WP_Error en caso de error
      */
     public function get_categories() {
         $response = wp_remote_get($this->api_base_url . '/categories');
         
         if (is_wp_error($response)) {
-            return new WP_REST_Response(array(
-                'error' => 'Error al obtener categorías'
-            ), 500);
+            return new WP_Error('api_error', 'Error al obtener categorías');
         }
 
         $body = wp_remote_retrieve_body($response);
-        return new WP_REST_Response(json_decode($body), 200);
+        $data = json_decode($body, true);
+        
+        if (is_null($data)) {
+            return new WP_Error('api_error', 'Error al decodificar la respuesta');
+        }
+        
+        return $data;
     }
 }

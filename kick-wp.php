@@ -31,11 +31,12 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Currently plugin version.
- * Start at version 1.0.0 and use SemVer - https://semver.org
- * Rename this for your plugin and update it as you release new versions.
+ * Define constants
  */
 define( 'KICK_WP_VERSION', '1.0.0' );
+define( 'KICK_WP_FILE', __FILE__ );
+define( 'KICK_WP_PATH', plugin_dir_path( __FILE__ ) );
+define( 'KICK_WP_URL', plugin_dir_url( __FILE__ ) );
 
 /**
  * The code that runs during plugin activation.

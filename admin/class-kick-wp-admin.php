@@ -51,11 +51,52 @@ class Kick_Wp_Admin {
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
 
+		// Verificar las constantes necesarias
+		if (!defined('KICK_WP_PATH')) {
+			define('KICK_WP_PATH', plugin_dir_path(dirname(__FILE__)));
+		}
+
+		// Cargar las dependencias necesarias
+		$this->load_dependencies();
+
+		// Registrar las acciones y filtros
+		$this->define_admin_hooks();
+	}
+
+	/**
+	 * Carga las dependencias necesarias para el admin
+	 */
+	private function load_dependencies() {
+		// Cargar la clase API si no está disponible
+		if (!class_exists('Kick_Wp_Api')) {
+			$api_file = KICK_WP_PATH . 'includes/class-kick-wp-api.php';
+			if (file_exists($api_file)) {
+				require_once $api_file;
+			}
+		}
+	}
+
+	/**
+	 * Define los hooks de administración
+	 */
+	private function define_admin_hooks() {
 		// Añadir menú de administración
 		add_action('admin_menu', array($this, 'add_plugin_admin_menu'));
 		
-		// Registrar configuraciones
+		// Registrar configuraciones y opciones
 		add_action('admin_init', array($this, 'register_settings'));
+		
+		// Añadir enlace de configuración en la lista de plugins si es posible
+		if (defined('KICK_WP_FILE')) {
+			add_filter('plugin_action_links_' . plugin_basename(KICK_WP_FILE), array($this, 'add_settings_link'));
+		}
+		
+		// Inicializar las opciones por defecto
+		$this->initialize_options();
+
+		// Registrar scripts y estilos
+		add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));
+		add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
 	}
 
 	/**
@@ -91,48 +132,132 @@ class Kick_Wp_Admin {
 	}
 
 	/**
-	 * Añade el menú de administración del plugin
+	 * Inicializa las opciones del plugin
 	 */
-	public function add_plugin_admin_menu() {
-		add_menu_page(
-			'Kick WP', // Título de la página
-			'Kick WP', // Texto del menú
-			'manage_options', // Capacidad requerida
-			'kick-wp', // Slug del menú
-			array($this, 'display_plugin_admin_page'), // Función de callback
-			'dashicons-video-alt3', // Icono
-			30 // Posición
-		);
+	private function initialize_options() {
+		add_option('kick_wp_cache_duration', 300);
+		add_option('kick_wp_streams_per_page', 12);
+		add_option('kick_wp_auto_refresh', 1);
 	}
 
 	/**
-	 * Registra las configuraciones del plugin
+	 * Registra las opciones del plugin
 	 */
 	public function register_settings() {
+		// Registrar configuraciones
 		register_setting(
 			'kick_wp_options',
 			'kick_wp_cache_duration',
 			array(
 				'type' => 'integer',
-				'default' => 300,
-				'sanitize_callback' => 'absint',
+				'description' => 'Duración del caché en segundos',
+				'sanitize_callback' => array($this, 'sanitize_cache_duration'),
+				'default' => 300
 			)
+		);
+
+		register_setting(
+			'kick_wp_options',
+			'kick_wp_streams_per_page',
+			array(
+				'type' => 'integer',
+				'description' => 'Número de streams por página',
+				'sanitize_callback' => array($this, 'sanitize_streams_per_page'),
+				'default' => 12
+			)
+		);
+
+		register_setting(
+			'kick_wp_options',
+			'kick_wp_auto_refresh',
+			array(
+				'type' => 'boolean',
+				'description' => 'Actualización automática',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default' => true
+			)
+		);
+
+		// Registrar sección
+		add_settings_section(
+			'kick_wp_general_section',
+			__('Configuración General', 'kick-wp'),
+			array($this, 'render_settings_section'),
+			'kick_wp_settings'
 		);
 	}
 
 	/**
-	 * Renderiza la página de administración
+	 * Sanitiza la duración del caché
+	 */
+	public function sanitize_cache_duration($value) {
+		$value = absint($value);
+		return $value < 60 ? 60 : $value;
+	}
+
+	/**
+	 * Sanitiza el número de streams por página
+	 */
+	public function sanitize_streams_per_page($value) {
+		$value = absint($value);
+		return min(max($value, 4), 24);
+	}
+
+	/**
+	 * Renderiza la descripción de la sección de configuración
+	 */
+	public function render_settings_section() {
+		echo '<p>' . esc_html__('Configura las opciones generales del plugin Kick WP.', 'kick-wp') . '</p>';
+	}
+
+	/**
+	 * Añade el menú de administración
+	 */
+	public function add_plugin_admin_menu() {
+		add_menu_page(
+			__('Kick WP', 'kick-wp'),
+			__('Kick WP', 'kick-wp'),
+			'manage_options',
+			$this->plugin_name,
+			array($this, 'display_plugin_admin_page'),
+			'dashicons-video-alt3',
+			30
+		);
+	}
+
+	/**
+	 * Añade el enlace de configuración en la lista de plugins
+	 */
+	public function add_settings_link($links) {
+		$settings_link = '<a href="admin.php?page=' . $this->plugin_name . '">' . __('Configuración', 'kick-wp') . '</a>';
+		array_unshift($links, $settings_link);
+		return $links;
+	}
+
+	/**
+	 * Muestra la página de administración
 	 */
 	public function display_plugin_admin_page() {
-		// Inicializar la API
-		$api = new Kick_Wp_Api();
-		
-		// Obtener datos
-		$featured_streams = $api->get_featured_streams();
-		$categories = $api->get_categories();
-		
-		// Incluir la plantilla
-		include plugin_dir_path( dirname( __FILE__ ) ) . 'admin/partials/kick-wp-admin-display.php';
+		try {
+			// Verificar que la API esté disponible
+			if (!class_exists('Kick_Wp_Api')) {
+				require_once KICK_WP_PATH . 'includes/class-kick-wp-api.php';
+			}
+
+			// Inicializar la API
+			$api = new Kick_Wp_Api();
+			
+			// Obtener datos
+			$featured_streams = $api->get_featured_streams();
+			$categories = $api->get_categories();
+			
+			// Incluir la plantilla
+			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/partials/kick-wp-admin-display.php';
+		} catch (Exception $e) {
+			echo '<div class="error"><p>' . 
+				esc_html__('Error al cargar la página de administración: ', 'kick-wp') . 
+				esc_html($e->getMessage()) . '</p></div>';
+		}
 	}
 
 }
