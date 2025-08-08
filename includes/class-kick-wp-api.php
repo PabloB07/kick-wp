@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Manejo de la API de Kick.com
  *
@@ -74,18 +73,32 @@ class Kick_Wp_Api {
      * @return array|WP_Error Array de streams o WP_Error en caso de error
      */
     public function get_featured_streams() {
+        $cached = get_transient('kick_wp_featured_streams');
+        if ($cached !== false) {
+            return $cached;
+        }
+
         $response = wp_remote_get($this->api_base_url . '/channels/featured');
         
         if (is_wp_error($response)) {
-            return new WP_Error('api_error', 'Error al obtener streams destacados');
+            return array(
+                'error' => 'Error al obtener streams destacados',
+                'data' => array()
+            );
         }
 
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
         
         if (is_null($data)) {
-            return new WP_Error('api_error', 'Error al decodificar la respuesta');
+            return array(
+                'error' => 'Error al decodificar la respuesta',
+                'data' => array()
+            );
         }
+        
+        $cache_duration = get_option('kick_wp_cache_duration', 300);
+        set_transient('kick_wp_featured_streams', $data, $cache_duration);
         
         return $data;
     }
@@ -96,18 +109,32 @@ class Kick_Wp_Api {
      * @return array|WP_Error Array de categorías o WP_Error en caso de error
      */
     public function get_categories() {
+        $cached = get_transient('kick_wp_categories');
+        if ($cached !== false) {
+            return $cached;
+        }
+
         $response = wp_remote_get($this->api_base_url . '/categories');
         
         if (is_wp_error($response)) {
-            return new WP_Error('api_error', 'Error al obtener categorías');
+            return array(
+                'error' => 'Error al obtener categorías',
+                'data' => array()
+            );
         }
 
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
         
         if (is_null($data)) {
-            return new WP_Error('api_error', 'Error al decodificar la respuesta');
+            return array(
+                'error' => 'Error al decodificar la respuesta',
+                'data' => array()
+            );
         }
+
+        $cache_duration = get_option('kick_wp_cache_duration', 300);
+        set_transient('kick_wp_categories', $data, $cache_duration);
         
         return $data;
     }

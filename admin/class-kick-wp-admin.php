@@ -56,11 +56,8 @@ class Kick_Wp_Admin {
 			define('KICK_WP_PATH', plugin_dir_path(dirname(__FILE__)));
 		}
 
-		// Cargar las dependencias necesarias
-		$this->load_dependencies();
-
-		// Registrar las acciones y filtros
-		$this->define_admin_hooks();
+		// Inicializar la API
+		$this->api = new Kick_Wp_Api();
 	}
 
 	/**
@@ -211,6 +208,24 @@ class Kick_Wp_Admin {
 	}
 
 	/**
+	 * Obtiene los datos para la página de administración
+	 */
+	private function get_admin_data() {
+		try {
+			return array(
+				'featured_streams' => $this->api->get_featured_streams(),
+				'categories' => $this->api->get_categories()
+			);
+		} catch (Exception $e) {
+			return array(
+				'error' => $e->getMessage(),
+				'featured_streams' => array(),
+				'categories' => array()
+			);
+		}
+	}
+
+	/**
 	 * Añade el menú de administración
 	 */
 	public function add_plugin_admin_menu() {
@@ -239,18 +254,22 @@ class Kick_Wp_Admin {
 	 */
 	public function display_plugin_admin_page() {
 		try {
-			// Verificar que la API esté disponible
-			if (!class_exists('Kick_Wp_Api')) {
-				require_once KICK_WP_PATH . 'includes/class-kick-wp-api.php';
+			if (!isset($this->api)) {
+				$this->api = new Kick_Wp_Api();
 			}
 
-			// Inicializar la API
-			$api = new Kick_Wp_Api();
-			
 			// Obtener datos
-			$featured_streams = $api->get_featured_streams();
-			$categories = $api->get_categories();
-			
+			$featured_streams = $this->api->get_featured_streams();
+			$categories = $this->api->get_categories();
+
+			// Si no hay datos, inicializar arrays vacíos
+			if (empty($featured_streams)) {
+				$featured_streams = array('data' => array());
+			}
+			if (empty($categories)) {
+				$categories = array('data' => array());
+			}
+
 			// Incluir la plantilla
 			require_once plugin_dir_path(dirname(__FILE__)) . 'admin/partials/kick-wp-admin-display.php';
 		} catch (Exception $e) {

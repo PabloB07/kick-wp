@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The file that defines the core plugin class
  *
@@ -156,11 +155,20 @@ class Kick_Wp {
 	 * @access   private
 	 */
 	private function define_admin_hooks() {
-
 		$plugin_admin = new Kick_Wp_Admin( $this->get_plugin_name(), $this->get_version() );
 
+		// Enqueue scripts y estilos
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+
+		// Menú de administración y configuraciones
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_admin_menu' );
+		$this->loader->add_action( 'admin_init', $plugin_admin, 'register_settings' );
+
+		// Enlaces de plugins
+		if (defined('KICK_WP_FILE')) {
+			$this->loader->add_filter( 'plugin_action_links_' . plugin_basename(KICK_WP_FILE), $plugin_admin, 'add_settings_link' );
+		}
 
 	}
 
