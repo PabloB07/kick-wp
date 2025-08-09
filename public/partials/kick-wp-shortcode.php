@@ -31,26 +31,28 @@ function kick_wp_display_streams_html($streams, $args = array()) {
         <?php if (!empty($streams['data'])): ?>
             <?php foreach ($streams['data'] as $stream): ?>
                 <div class="kick-wp-stream-card">
-                    <?php if (!empty($stream['thumbnail'])): ?>
-                        <div class="kick-wp-stream-thumbnail">
-                            <img src="<?php echo esc_url($stream['thumbnail']); ?>" 
-                                 alt="<?php echo esc_attr($stream['username']); ?>" />
-                        </div>
-                    <?php endif; ?>
+                    <?php 
+                    $thumbnail = !empty($stream['thumbnail']) ? $stream['thumbnail'] : 'https://kick.com/img/placeholder.png';
+                    ?>
+                    <div class="kick-wp-stream-thumbnail">
+                        <img src="<?php echo esc_url($thumbnail); ?>" 
+                             alt="<?php echo esc_attr($stream['username']); ?>" 
+                             loading="lazy"
+                             onerror="this.src='https://kick.com/img/placeholder.png'" />
+                    </div>
                     
                     <div class="kick-wp-stream-info">
                         <h3>
                             <a href="<?php echo esc_url($stream['channel_url']); ?>" 
                                target="_blank" rel="noopener noreferrer">
                                 <?php echo esc_html($stream['username']); ?>
+                                <?php if (!empty($stream['title'])): ?>
+                                    <span class="kick-wp-stream-title">
+                                        <?php echo esc_html($stream['title']); ?>
+                                    </span>
+                                <?php endif; ?>
                             </a>
                         </h3>
-                        
-                        <?php if (!empty($stream['title'])): ?>
-                            <p class="kick-wp-stream-title">
-                                <?php echo esc_html($stream['title']); ?>
-                            </p>
-                        <?php endif; ?>
                         
                         <div class="kick-wp-stream-meta">
                             <?php if ($show_viewers && !empty($stream['viewer_count'])): ?>

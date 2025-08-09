@@ -180,12 +180,14 @@ class Kick_Wp {
 	 * @access   private
 	 */
 	private function define_public_hooks() {
-
 		$plugin_public = new Kick_Wp_Public( $this->get_plugin_name(), $this->get_version() );
 
+		// Registrar estilos y scripts
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
-
+		
+		// Asegurar que los shortcodes estén disponibles
+		add_shortcode( 'kick_wp_streams', array( $plugin_public, 'render_streams_shortcode' ) );
 	}
 
 	/**

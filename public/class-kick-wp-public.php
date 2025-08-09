@@ -41,6 +41,15 @@ class Kick_Wp_Public {
 	private $version;
 
 	/**
+	 * The API instance.
+	 *
+	 * @since    1.0.0
+	 * @access   private
+	 * @var      Kick_Wp_Api    $api    The API instance.
+	 */
+	private $api;
+
+	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
@@ -51,6 +60,7 @@ class Kick_Wp_Public {
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
+		$this->api = new Kick_Wp_Api();
 
 		// Registrar el shortcode
 		add_shortcode('kick_wp_streams', array($this, 'render_streams_shortcode'));
@@ -62,21 +72,11 @@ class Kick_Wp_Public {
 	 * @since    1.0.0
 	 */
 	public function enqueue_styles() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Kick_Wp_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Kick_Wp_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/kick-wp-public.css', array(), $this->version, 'all' );
-
+		// Enqueue Dashicons
+		wp_enqueue_style('dashicons');
+		
+		// Enqueue our plugin styles
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/kick-wp-public.css', array('dashicons'), $this->version, 'all' );
 	}
 
 	/**
@@ -94,32 +94,66 @@ class Kick_Wp_Public {
 	 * @param array $atts Atributos del shortcode
 	 * @return string HTML del shortcode
 	 */
-	public function render_streams_shortcode($atts) {
-		// Procesar atributos
+	public function render_streams_shortcode($atts = array()) {
+		// Procesar atributos con valores por defecto
 		$atts = shortcode_atts(array(
 			'count' => get_option('kick_wp_default_stream_count', 4),
 			'category' => '',
 			'layout' => get_option('kick_wp_layout_style', 'grid'),
-			'streamer' => '' // Nuevo atributo para streamer específico
+			'streamer' => ''
 		), $atts, 'kick_wp_streams');
 
+		// Asegurar que count sea un número válido
+		$atts['count'] = absint($atts['count']);
+		if ($atts['count'] < 1) {
+			$atts['count'] = get_option('kick_wp_default_stream_count', 4);
+		}
+
 		try {
+			// Debug: Mostrar atributos recibidos
+			$debug_output = '<div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">';
+			$debug_output .= '<p><strong>Debug Info:</strong></p>';
+			$debug_output .= '<pre>' . print_r($atts, true) . '</pre>';
+			
 			// Inicializar la API
 			if (!isset($this->api)) {
 				$this->api = new Kick_Wp_Api();
+				$debug_output .= '<p>API inicializada</p>';
 			}
 			
 			// Si se especifica un streamer, obtener su stream
 			if (!empty($atts['streamer'])) {
 				$streamer = sanitize_text_field($atts['streamer']);
-				$stream = $this->api->get_streamer($streamer);
-				$streams = array('data' => array($stream));
+				$debug_output .= '<p>Buscando streamer: ' . esc_html($streamer) . '</p>';
+				
+				$response = $this->api->get_streamer($streamer);
+				if (isset($response['error'])) {
+					throw new Exception($response['error']);
+				}
+				
+				// La respuesta ya viene formateada correctamente del método get_streamer
+				$streams = $response;
+				
+				$debug_output .= '<p>Respuesta de la API:</p>';
+				$debug_output .= '<pre>' . print_r($streams, true) . '</pre>';
 			} else {
 				// Obtener los streams destacados
-				$streams = $this->api->get_featured_streams(array(
+				$response = $this->api->get_featured_streams(array(
 					'limit' => intval($atts['count']),
 					'category' => sanitize_text_field($atts['category'])
 				));
+				
+				if (isset($response['error'])) {
+					throw new Exception($response['error']);
+				}
+				
+				// La respuesta ya viene formateada correctamente del método get_featured_streams
+				$streams = $response;
+			}
+			$debug_output .= '</div>';
+			
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				echo $debug_output;
 			}
 			
 			// Incluir la plantilla

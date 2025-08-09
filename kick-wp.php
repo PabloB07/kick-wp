@@ -73,6 +73,15 @@ register_deactivation_hook( __FILE__, 'deactivate_kick_wp' );
  * admin-specific hooks, and public-facing site hooks.
  */
 require plugin_dir_path( __FILE__ ) . 'includes/class-kick-wp.php';
+require plugin_dir_path( __FILE__ ) . 'admin/class-kick-wp-admin-settings.php';
+
+/**
+ * Carga el código de administración
+ */
+function load_kick_wp_admin() {
+    new Kick_Wp_Admin_Settings();
+}
+add_action('plugins_loaded', 'load_kick_wp_admin');
 
 /**
  * Begins execution of the plugin.

@@ -41,6 +41,15 @@ class Kick_Wp_Admin {
 	private $version;
 
 	/**
+	 * The API instance.
+	 *
+	 * @since    1.0.0
+	 * @access   private
+	 * @var      Kick_Wp_Api    $api    The API instance.
+	 */
+	private $api;
+
+	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0

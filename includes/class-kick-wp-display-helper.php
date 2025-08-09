@@ -1,0 +1,132 @@
+<?php
+/**
+ * Clase helper para manejar la visualización de streams y categorías
+ *
+ * @link       https://blancocl.vercel.app
+ * @since      1.0.0
+ *
+ * @package    Kick_Wp
+ * @subpackage Kick_Wp/includes
+ */
+
+class Kick_Wp_Display_Helper {
+    
+    /**
+     * Renderiza HTML para mostrar streams
+     *
+     * @param array $streams Datos de los streams
+     * @param array $args Argumentos adicionales
+     * @return string HTML generado
+     */
+    public static function render_streams($streams, $args = array()) {
+        $default_layout = get_option('kick_wp_layout_style', 'grid');
+        $show_viewers = get_option('kick_wp_show_viewer_count', true);
+        $show_categories = get_option('kick_wp_show_categories', true);
+        
+        $layout = isset($args['layout']) ? $args['layout'] : $default_layout;
+        $container_class = 'kick-wp-streams-' . esc_attr($layout);
+        
+        ob_start();
+        ?>
+        <div class="kick-wp-streams-container <?php echo esc_attr($container_class); ?>">
+            <?php if (!empty($streams['data'])): ?>
+                <?php foreach ($streams['data'] as $stream): ?>
+                    <div class="kick-wp-stream-card">
+                        <?php 
+                        $thumbnail = !empty($stream['thumbnail']) ? $stream['thumbnail'] : 'https://kick.com/img/placeholder.png';
+                        ?>
+                        <div class="kick-wp-stream-thumbnail">
+                            <img src="<?php echo esc_url($thumbnail); ?>" 
+                                 alt="<?php echo esc_attr($stream['username']); ?>" 
+                                 loading="lazy"
+                                 onerror="this.src='https://kick.com/img/placeholder.png'" />
+                        </div>
+                        
+                        <div class="kick-wp-stream-info">
+                            <h3>
+                                <a href="<?php echo esc_url($stream['channel_url']); ?>" 
+                                   target="_blank" rel="noopener noreferrer">
+                                    <?php echo esc_html($stream['username']); ?>
+                                    <?php if (!empty($stream['title'])): ?>
+                                        <span class="kick-wp-stream-title">
+                                            <?php echo esc_html($stream['title']); ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </a>
+                            </h3>
+                            
+                            <div class="kick-wp-stream-meta">
+                                <?php if ($show_viewers && !empty($stream['viewer_count'])): ?>
+                                    <div class="kick-wp-viewer-count">
+                                        <span class="dashicons dashicons-visibility"></span>
+                                        <?php echo number_format($stream['viewer_count']); ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php if ($show_categories && !empty($stream['category'])): ?>
+                                    <div class="kick-wp-category-tag">
+                                        <?php echo esc_html($stream['category']); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <a href="<?php echo esc_url($stream['channel_url']); ?>" 
+                               class="kick-wp-watch-button" 
+                               target="_blank" rel="noopener noreferrer">
+                                <?php esc_html_e('Ver Stream', 'kick-wp'); ?>
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p class="kick-wp-no-streams">
+                    <?php esc_html_e('No hay streams disponibles en este momento.', 'kick-wp'); ?>
+                </p>
+            <?php endif; ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+    
+    /**
+     * Renderiza HTML para mostrar categorías
+     *
+     * @param array $categories Datos de las categorías
+     * @return string HTML generado
+     */
+    public static function render_categories($categories) {
+        ob_start();
+        ?>
+        <div class="kick-wp-categories-container">
+            <?php if (!empty($categories['data'])): ?>
+                <?php foreach ($categories['data'] as $category): ?>
+                    <div class="kick-wp-category-card">
+                        <?php if (!empty($category['thumbnail'])): ?>
+                            <div class="kick-wp-category-thumbnail">
+                                <img src="<?php echo esc_url($category['thumbnail']); ?>" 
+                                     alt="<?php echo esc_attr($category['name']); ?>" 
+                                     loading="lazy" />
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div class="kick-wp-category-info">
+                            <h3><?php echo esc_html($category['name']); ?></h3>
+                            <div class="kick-wp-category-meta">
+                                <div class="kick-wp-viewer-count">
+                                    <span class="dashicons dashicons-visibility"></span>
+                                    <?php echo number_format($category['viewers']); ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p class="kick-wp-no-categories">
+                    <?php esc_html_e('No hay categorías disponibles.', 'kick-wp'); ?>
+                </p>
+            <?php endif; ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+}
