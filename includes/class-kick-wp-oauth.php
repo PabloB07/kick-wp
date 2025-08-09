@@ -16,8 +16,8 @@ class Kick_Wp_OAuth {
     private $redirect_uri;
     
     // URLs oficiales de OAuth de Kick.com (actualizadas)
-    private $auth_url = 'https://id.kick.com/oauth2/authorize';
-    private $token_url = 'https://id.kick.com/oauth2/token';
+    private $auth_url = 'https://id.kick.com/oauth/authorize';
+    private $token_url = 'https://id.kick.com/oauth/token';
     private $api_scope = 'profile:read streams:read';
     
     public function __construct() {

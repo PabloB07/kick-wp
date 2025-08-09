@@ -12,8 +12,8 @@
 class Kick_Wp_Api {
     
     // URLs actualizadas y corregidas
-    private $api_v1 = 'https://kick.com/api/v1/';
-    private $api_v2 = 'https://kick.com/api/v2/';
+    private $api_v1 = 'https://api.kick.com/public/v1/';
+    private $api_v2 = 'https://api.kick.com/public/v2/';
     private $auth_token;
     private $request_args;
 
