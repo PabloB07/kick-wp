@@ -454,7 +454,6 @@ class Kick_Wp_Admin {
         array_unshift($links, $settings_link);
         return $links;
     }
-}
 
     // Añadir este método en la clase Kick_Wp_Admin
     public function handle_admin_actions() {
@@ -473,3 +472,4 @@ class Kick_Wp_Admin {
             exit;
         }
     }
+}
