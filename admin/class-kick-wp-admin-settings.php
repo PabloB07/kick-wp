@@ -38,12 +38,38 @@ class Kick_Wp_Admin_Settings {
      * Registra las opciones de configuración
      */
     public function register_settings() {
+        // Configuración existente
         register_setting('kick_wp_options', 'kick_wp_api_token', array(
             'type' => 'string',
             'sanitize_callback' => 'sanitize_text_field',
             'default' => ''
         ));
-
+        
+        // Nuevas opciones para OAuth2
+        register_setting('kick_wp_options', 'kick_wp_client_id', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        
+        register_setting('kick_wp_options', 'kick_wp_client_secret', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        
+        register_setting('kick_wp_options', 'kick_wp_refresh_token', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        
+        register_setting('kick_wp_options', 'kick_wp_token_expires', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 0
+        ));
+        
         register_setting('kick_wp_options', 'kick_wp_cache_duration', array(
             'type' => 'integer',
             'sanitize_callback' => 'absint',

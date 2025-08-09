@@ -1,44 +1,71 @@
-/**
- * Estilos públicos para el plugin
- */
-
-/* Contenedor de streams */
-.kick-wp-streams-container {
-    margin: 20px 0;
+/* Variables CSS */
+:root {
+    --kick-primary-color: #0d1117;
+    --kick-accent-color: #00ff88;
+    --kick-text-color: #333;
+    --kick-text-light: #666;
+    --kick-border-color: #e0e0e0;
+    --kick-hover-color: #f5f5f5;
+    --kick-error-color: #dc3545;
+    --kick-success-color: #28a745;
+    --kick-radius: 8px;
+    --kick-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    --kick-shadow-hover: 0 4px 16px rgba(0,0,0,0.15);
 }
 
-/* Vista de cuadrícula */
-.kick-wp-streams-grid {
+/* Contenedor principal */
+.kick-wp-streams-container {
+    margin: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Layouts */
+.kick-wp-layout-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
 
-/* Vista de lista */
-.kick-wp-streams-list .kick-wp-stream-card {
+.kick-wp-layout-list .kick-wp-stream-card {
+    display: flex;
     margin-bottom: 20px;
+    max-width: 100%;
+}
+
+.kick-wp-layout-list .kick-wp-stream-thumbnail {
+    flex: 0 0 200px;
+    padding-top: 0;
+    height: 120px;
+}
+
+.kick-wp-layout-list .kick-wp-stream-info {
+    flex: 1;
+    padding: 15px 20px;
 }
 
 /* Tarjeta de stream */
 .kick-wp-stream-card {
     background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    border: 1px solid var(--kick-border-color);
+    border-radius: var(--kick-radius);
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.3s ease;
+    box-shadow: var(--kick-shadow);
 }
 
 .kick-wp-stream-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-4px);
+    box-shadow: var(--kick-shadow-hover);
+    border-color: var(--kick-accent-color);
 }
 
 /* Thumbnail */
 .kick-wp-stream-thumbnail {
     position: relative;
     width: 100%;
-    padding-top: 56.25%; /* 16:9 aspect ratio */
-    background-color: #f5f5f5;
+    padding-top: 56.25%; /* 16:9 */
+    background: var(--kick-hover-color);
+    overflow: hidden;
 }
 
 .kick-wp-stream-thumbnail img {
@@ -48,33 +75,65 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.kick-wp-stream-card:hover .kick-wp-stream-thumbnail img {
+    transform: scale(1.05);
+}
+
+/* Badge de LIVE */
+.kick-wp-live-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ff3333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    animation: pulse 2s infinite;
+    z-index: 2;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 /* Información del stream */
 .kick-wp-stream-info {
-    padding: 15px;
-}
-
-.kick-wp-stream-info h3 {
-    margin: 0 0 10px 0;
-    font-size: 18px;
-    line-height: 1.4;
-}
-
-.kick-wp-stream-info h3 a {
-    color: #1a1a1a;
-    text-decoration: none;
-}
-
-.kick-wp-stream-info h3 a:hover {
-    color: #0073aa;
+    padding: 16px;
 }
 
 .kick-wp-stream-title {
-    color: #666;
-    margin: 0 0 10px 0;
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.kick-wp-stream-title a {
+    color: var(--kick-text-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.kick-wp-stream-title a:hover {
+    color: var(--kick-accent-color);
+}
+
+.kick-wp-stream-description {
+    color: var(--kick-text-light);
     font-size: 14px;
     line-height: 1.4;
+    margin: 0 0 12px 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 /* Meta información */
@@ -82,76 +141,324 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .kick-wp-viewer-count {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
-    color: #666;
-    font-size: 14px;
+    gap: 4px;
+    color: var(--kick-text-light);
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .kick-wp-viewer-count .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-    color: #666;
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--kick-accent-color);
 }
 
 .kick-wp-category-tag {
-    background: #f0f0f0;
-    color: #666;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Botón de acción */
+/* Botón de ver stream */
 .kick-wp-watch-button {
     display: inline-block;
-    background: #0073aa;
-    color: #fff;
-    padding: 8px 16px;
+    background: linear-gradient(135deg, var(--kick-accent-color) 0%, #00cc6a 100%);
+    color: white;
+    padding: 10px 20px;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 14px;
-    transition: background-color 0.2s ease;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    width: 100%;
 }
 
 .kick-wp-watch-button:hover {
-    background: #005177;
-    color: #fff;
+    color: white;
     text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
 }
 
-/* Mensaje de error */
-.kick-wp-error {
-    color: #d63638;
-    padding: 10px;
-    border-left: 4px solid #d63638;
-    background: #fef8f8;
+.kick-wp-watch-button:active {
+    transform: translateY(0);
 }
 
-/* Mensaje de no streams */
+/* Estados de error y vacío */
+.kick-wp-error,
 .kick-wp-no-streams {
     text-align: center;
-    padding: 20px;
-    color: #666;
-    background: #f9f9f9;
-    border-radius: 4px;
+    padding: 30px 20px;
+    border-radius: var(--kick-radius);
+    margin: 20px 0;
 }
 
-/* Responsive */
-@media screen and (max-width: 782px) {
-    .kick-wp-streams-grid {
+.kick-wp-error {
+    background: #fff5f5;
+    border: 1px solid #feb2b2;
+    color: var(--kick-error-color);
+}
+
+.kick-wp-error p {
+    margin: 0;
+    font-weight: 500;
+}
+
+.kick-wp-no-streams {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    color: var(--kick-text-light);
+}
+
+.kick-wp-no-streams p {
+    margin: 0;
+    font-size: 16px;
+}
+
+/* Loading placeholder */
+.kick-wp-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    font-size: 14px;
+    color: var(--kick-text-light);
+}
+
+.kick-wp-loading::before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--kick-accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .kick-wp-layout-grid {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 16px;
+    }
+    
+    .kick-wp-layout-list .kick-wp-stream-card {
+        flex-direction: column;
+    }
+    
+    .kick-wp-layout-list .kick-wp-stream-thumbnail {
+        flex: none;
+        padding-top: 56.25%;
+        height: auto;
     }
     
     .kick-wp-stream-meta {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
+    }
+    
+    .kick-wp-stream-info {
+        padding: 12px;
+    }
+    
+    .kick-wp-stream-title {
+        font-size: 15px;
+    }
+    
+    .kick-wp-stream-description {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .kick-wp-streams-container {
+        margin: 10px 0;
+    }
+    
+    .kick-wp-layout-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .kick-wp-stream-card {
+        border-radius: 6px;
+    }
+    
+    .kick-wp-stream-info {
+        padding: 10px;
+    }
+    
+    .kick-wp-watch-button {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+}
+
+/* Accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+    .kick-wp-stream-card,
+    .kick-wp-stream-thumbnail img,
+    .kick-wp-watch-button {
+        transition: none;
+    }
+    
+    .kick-wp-stream-card:hover {
+        transform: none;
+    }
+    
+    .kick-wp-stream-card:hover .kick-wp-stream-thumbnail img {
+        transform: none;
+    }
+    
+    .kick-wp-live-badge {
+        animation: none;
+    }
+    
+    .kick-wp-loading::before {
+        animation: none;
+    }
+}
+
+/* Contraste alto */
+@media (prefers-contrast: high) {
+    :root {
+        --kick-border-color: #000;
+        --kick-text-light: #444;
+        --kick-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .kick-wp-stream-card {
+        border-width: 2px;
+    }
+    
+    .kick-wp-category-tag {
+        background: #000;
+        color: #fff;
+    }
+    
+    .kick-wp-watch-button {
+        background: #000;
+        border: 2px solid #000;
+    }
+}
+
+/* Modo oscuro */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --kick-primary-color: #ffffff;
+        --kick-text-color: #ffffff;
+        --kick-text-light: #cccccc;
+        --kick-border-color: #404040;
+        --kick-hover-color: #2a2a2a;
+        --kick-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        --kick-shadow-hover: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    
+    .kick-wp-stream-card {
+        background: #1a1a1a;
+        border-color: var(--kick-border-color);
+    }
+    
+    .kick-wp-stream-thumbnail {
+        background: var(--kick-hover-color);
+    }
+    
+    .kick-wp-error {
+        background: #2d1b1b;
+        border-color: #8b3a3a;
+    }
+    
+    .kick-wp-no-streams {
+        background: #1e2328;
+        border-color: #404040;
+    }
+}
+
+/* Animaciones adicionales */
+.kick-wp-stream-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hover effects mejorados */
+.kick-wp-stream-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent, rgba(0, 255, 136, 0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.kick-wp-stream-card:hover::before {
+    opacity: 1;
+}
+
+/* Focus states para accesibilidad */
+.kick-wp-stream-title a:focus,
+.kick-wp-watch-button:focus {
+    outline: 2px solid var(--kick-accent-color);
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .kick-wp-streams-container {
+        display: block;
+    }
+    
+    .kick-wp-stream-card {
+        break-inside: avoid;
+        border: 1px solid #000;
+        margin-bottom: 20px;
+        box-shadow: none;
+    }
+    
+    .kick-wp-watch-button {
+        display: none;
+    }
+    
+    .kick-wp-stream-title a {
+        color: #000 !important;
+        text-decoration: underline;
     }
 }
