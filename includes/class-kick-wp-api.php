@@ -1,9 +1,9 @@
 <?php
 /**
- * API de Kick.com con autenticación y seguimiento (Optimizada)
+ * API de Kick.com con autenticación y seguimiento (Corregida)
  *
  * @link       https://blancocl.vercel.app
- * @since      1.1.0
+ * @since      1.2.0
  *
  * @package    Kick_Wp
  * @subpackage Kick_Wp/includes
@@ -11,18 +11,15 @@
 
 class Kick_Wp_Api {
     
+    // URLs actualizadas y corregidas
     private $api_v1 = 'https://kick.com/api/v1/';
     private $api_v2 = 'https://kick.com/api/v2/';
-    // Actualizar la API pública con la URL correcta
-    private $api_public = 'https://api.kick.com/public/v1/';
     private $auth_token;
     private $request_args;
 
     public function __construct() {
         $this->auth_token = get_option('kick_wp_auth_token', '');
         $this->setup_request_args();
-        
-        // Verificar si el token necesita ser refrescado
         $this->maybe_refresh_token();
     }
 
@@ -30,10 +27,10 @@ class Kick_Wp_Api {
     private function setup_request_args() {
         $this->request_args = [
             'timeout' => 30,
-            'redirection' => 5,
+            'redirection' => 3,
             'httpversion' => '1.1',
             'headers' => $this->build_headers(),
-            'sslverify' => true, // mejor mantener verificación activa en prod
+            'sslverify' => true,
             'blocking' => true
         ];
     }
@@ -41,175 +38,338 @@ class Kick_Wp_Api {
     /** Construye headers según tipo de petición */
     private function build_headers($type = 'default') {
         $base = [
-            'Accept' => 'application/json, text/plain, */*',
-            'User-Agent' => 'Mozilla/5.0 (compatible; WordPress; +' . home_url() . ')',
-            'Referer' => 'https://kick.com/',
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . home_url(),
+            'Referer' => home_url(),
         ];
 
-        if ($type === 'minimal') {
-            return $base;
-        }
-
-        if ($type === 'public') {
-            $base['Accept-Language'] = 'en-US,en;q=0.5';
+        // Headers específicos para Kick.com
+        if ($type === 'kick_public') {
+            $base['Accept'] = 'application/json, text/plain, */*';
+            $base['Accept-Language'] = 'en-US,en;q=0.9';
             $base['Cache-Control'] = 'no-cache';
-            return $base;
+            $base['Pragma'] = 'no-cache';
+            unset($base['Content-Type']);
         }
 
         if (!empty($this->auth_token)) {
             $base['Authorization'] = 'Bearer ' . $this->auth_token;
         }
+
         return $base;
     }
 
     /** Construye URL con versión */
     private function build_url($endpoint, $version = 'v1') {
-        if ($version === 'public') {
-            $base = $this->api_public;
-        } else {
-            $base = $version === 'v2' ? $this->api_v2 : $this->api_v1;
-        }
+        $base = $version === 'v2' ? $this->api_v2 : $this->api_v1;
         return rtrim($base, '/') . '/' . ltrim($endpoint, '/');
     }
 
     /** Ejecuta una petición y parsea JSON */
-    private function try_request($url, $headers) {
+    private function try_request($url, $headers, $method = 'GET') {
         $args = $this->request_args;
         $args['headers'] = $headers;
+        $args['method'] = $method;
 
         $response = wp_remote_request($url, $args);
-        if (is_wp_error($response)) return false;
-
-        if (wp_remote_retrieve_response_code($response) === 200) {
-            $body = wp_remote_retrieve_body($response);
-            $data = json_decode($body, true);
-            return (json_last_error() === JSON_ERROR_NONE) ? $data : false;
+        
+        if (is_wp_error($response)) {
+            return [
+                'success' => false,
+                'error' => $response->get_error_message()
+            ];
         }
-        return false;
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+
+        if ($response_code === 200) {
+            $data = json_decode($body, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return [
+                    'success' => true,
+                    'data' => $data
+                ];
+            }
+        }
+
+        return [
+            'success' => false,
+            'error' => "HTTP {$response_code}: " . wp_remote_retrieve_response_message($response),
+            'body' => $body
+        ];
     }
 
     /** Hace una petición con reintentos y caché */
     private function make_request($endpoint, $params = [], $cache_time = 300, $method = 'GET') {
-        // Determinar si debemos usar la API pública para este endpoint
-        $use_public_api = in_array($endpoint, ['categories', 'channels/livestreams']);
-        $version = $use_public_api ? 'public' : 'v1';
-        
-        $url = $this->build_url($endpoint, $version);
+        $url = $this->build_url($endpoint, 'v1');
 
         if (!empty($params) && $method === 'GET') {
             $url = add_query_arg($params, $url);
         }
 
         $cache_key = 'kick_wp_' . md5($url . serialize($params));
-        if ($cache_time > 0 && ($cached = get_transient($cache_key)) !== false) {
-            return $cached;
+        
+        if ($cache_time > 0) {
+            $cached = get_transient($cache_key);
+            if ($cached !== false) {
+                return $cached;
+            }
         }
 
-        $attempts = [
-            // Primer intento: usar la versión determinada (pública o v1)
-            [$url, $this->build_headers($use_public_api ? 'public' : 'default')],
-            // Segundo intento: probar con v2 si no es pública
-            [$use_public_api ? $url : str_replace('/api/v1/', '/api/v2/', $url), $this->build_headers('minimal')],
-            // Tercer intento: probar con la otra opción
-            [$use_public_api ? $this->build_url($endpoint, 'v1') : $this->build_url($endpoint, 'public'), $this->build_headers('public')]
+        // Intentar diferentes configuraciones de headers
+        $header_configs = [
+            $this->build_headers('kick_public'),
+            $this->build_headers('default'),
+            $this->build_headers('minimal')
         ];
 
-        foreach ($attempts as [$try_url, $try_headers]) {
-            $data = $this->try_request($try_url, $try_headers);
-            if ($data) {
-                if ($cache_time > 0) set_transient($cache_key, $data, $cache_time);
-                return $data;
+        foreach ($header_configs as $headers) {
+            $result = $this->try_request($url, $headers, $method);
+            
+            if ($result['success']) {
+                $formatted_data = [
+                    'data' => isset($result['data']['data']) ? $result['data']['data'] : $result['data'],
+                    'meta' => isset($result['data']['meta']) ? $result['data']['meta'] : []
+                ];
+                
+                if ($cache_time > 0) {
+                    set_transient($cache_key, $formatted_data, $cache_time);
+                }
+                
+                return $formatted_data;
             }
-            sleep(1);
+            
+            // Pequeña pausa entre intentos
+            usleep(500000); // 0.5 segundos
         }
 
+        // Si todos los intentos fallan, devolver datos de fallback
         return $this->get_fallback_data($endpoint);
     }
 
     /** Unifica formato de streams */
     private function format_stream($stream) {
+        // Manejar diferentes estructuras de datos
+        $username = '';
+        $channel_url = '';
+        $thumbnail = '';
+        $title = '';
+        $viewer_count = 0;
+        $category = '';
+        $is_live = false;
+
+        // Extraer username
+        if (isset($stream['user']['username'])) {
+            $username = $stream['user']['username'];
+        } elseif (isset($stream['channel']['user']['username'])) {
+            $username = $stream['channel']['user']['username'];
+        } elseif (isset($stream['slug'])) {
+            $username = $stream['slug'];
+        }
+
+        // Construir URL del canal
+        if ($username) {
+            $channel_url = 'https://kick.com/' . $username;
+        }
+
+        // Extraer thumbnail
+        if (isset($stream['thumbnail']['url'])) {
+            $thumbnail = $stream['thumbnail']['url'];
+        } elseif (isset($stream['user']['profile_pic'])) {
+            $thumbnail = $stream['user']['profile_pic'];
+        }
+
+        // Extraer título
+        if (isset($stream['session_title'])) {
+            $title = $stream['session_title'];
+        } elseif (isset($stream['livestream']['session_title'])) {
+            $title = $stream['livestream']['session_title'];
+        }
+
+        // Extraer viewer count
+        if (isset($stream['viewer_count'])) {
+            $viewer_count = $stream['viewer_count'];
+        } elseif (isset($stream['livestream']['viewer_count'])) {
+            $viewer_count = $stream['livestream']['viewer_count'];
+        }
+
+        // Extraer categoría
+        if (isset($stream['category']['name'])) {
+            $category = $stream['category']['name'];
+        } elseif (isset($stream['categories'][0]['name'])) {
+            $category = $stream['categories'][0]['name'];
+        }
+
+        // Determinar si está en vivo
+        $is_live = isset($stream['livestream']) || 
+                   (isset($stream['is_live']) && $stream['is_live']) ||
+                   $viewer_count > 0;
+
         return [
-            'username' => $stream['user']['username'] ?? $stream['slug'] ?? 'Unknown',
-            'channel_url' => 'https://kick.com/' . ($stream['slug'] ?? 'unknown'),
-            'thumbnail' => $stream['thumbnail']['url'] ?? $stream['user']['profile_pic'] ?? '',
-            'title' => $stream['session_title'] ?? $stream['livestream']['session_title'] ?? 'Sin título',
-            'viewer_count' => $stream['viewer_count'] ?? $stream['livestream']['viewer_count'] ?? 0,
-            'category' => $stream['category']['name'] ?? $stream['categories'][0]['name'] ?? 'Sin categoría',
-            'is_live' => isset($stream['livestream']) || !empty($stream['is_live']),
-            'followers' => $stream['followers_count'] ?? 0
+            'username' => $username ?: 'Unknown',
+            'channel_url' => $channel_url ?: 'https://kick.com/',
+            'thumbnail' => $thumbnail ?: 'https://via.placeholder.com/320x180?text=No+Image',
+            'title' => $title ?: 'Sin título',
+            'viewer_count' => intval($viewer_count),
+            'category' => $category ?: 'Sin categoría',
+            'is_live' => $is_live,
+            'followers' => isset($stream['followers_count']) ? intval($stream['followers_count']) : 0
         ];
     }
 
-    /** API pública */
-    public function get_followed_streams($user_id = null) {
-        if (empty($this->auth_token)) {
-            return ['error' => 'Token requerido', 'data' => $this->get_fallback_followed_streams()['data']];
-        }
-        $endpoint = 'channels/followed' . ($user_id ? '/' . $user_id : '');
-        $result = $this->make_request($endpoint, [], 180);
-        return isset($result['error']) ? ['error' => $result['error'], 'data' => $this->get_fallback_followed_streams()['data']] : ['data' => array_map([$this, 'format_stream'], $result['data'] ?? [])];
-    }
-
+    /** API endpoints públicos */
     public function get_featured_streams($args = []) {
         $params = [
-            'limit' => isset($args['limit']) ? absint($args['limit']) : 12,
-            'sort' => 'desc',
-            'order_by' => 'viewers'
+            'limit' => isset($args['limit']) ? min(absint($args['limit']), 50) : 12,
         ];
-        if (!empty($args['category'])) $params['category'] = sanitize_text_field($args['category']);
+        
+        if (!empty($args['category'])) {
+            $params['category'] = sanitize_text_field($args['category']);
+        }
+        
         $result = $this->make_request('channels/livestreams', $params, 300);
-        return isset($result['error']) ? ['error' => $result['error'], 'data' => $this->get_fallback_featured_streams()['data']] : ['data' => array_map([$this, 'format_stream'], $result['data'] ?? [])];
+        
+        if (isset($result['data']) && is_array($result['data'])) {
+            $result['data'] = array_map([$this, 'format_stream'], $result['data']);
+        }
+        
+        return $result;
     }
 
     public function get_streamer($username) {
-        if (empty($username)) return ['error' => 'Username requerido'];
-        $result = $this->make_request('channels/' . sanitize_text_field($username), [], 300);
-        return isset($result['error']) ? ['error' => $result['error'], 'data' => $this->get_fallback_streamer_data($username)] : ['data' => [$this->format_stream($result)]];
+        if (empty($username)) {
+            return ['error' => 'Username requerido', 'data' => []];
+        }
+        
+        $username = sanitize_text_field($username);
+        $result = $this->make_request('channels/' . $username, [], 300);
+        
+        if (isset($result['data'])) {
+            $result['data'] = [$this->format_stream($result['data'])];
+        } else {
+            $result = ['data' => [$this->get_fallback_streamer_data($username)]];
+        }
+        
+        return $result;
     }
 
     public function get_categories() {
-        // Usar explícitamente la API pública para categorías
-        $url = $this->build_url('categories', 'public');
-        $headers = $this->build_headers('public');
+        $result = $this->make_request('categories', [], 3600);
         
-        $cache_key = 'kick_wp_categories';
-        if (($cached = get_transient($cache_key)) !== false) {
-            return $cached;
-        }
-        
-        $args = $this->request_args;
-        $args['headers'] = $headers;
-        
-        $response = wp_remote_get($url, $args);
-        
-        if (is_wp_error($response)) {
+        if (!isset($result['data']) || empty($result['data'])) {
             return $this->get_fallback_categories();
         }
         
-        if (wp_remote_retrieve_response_code($response) === 200) {
-            $body = wp_remote_retrieve_body($response);
-            $data = json_decode($body, true);
-            
-            if (json_last_error() === JSON_ERROR_NONE) {
-                set_transient($cache_key, $data, 3600);
-                return $data;
-            }
-        }
-        
-        return $this->get_fallback_categories();
+        return $result;
     }
 
-    /** Fallbacks (igual que en tu versión original) */
-    private function get_fallback_data($endpoint) {
-        if (strpos($endpoint, 'channels/followed') !== false) return $this->get_fallback_followed_streams();
-        if (strpos($endpoint, 'channels') !== false) return $this->get_fallback_featured_streams();
-        if (strpos($endpoint, 'categories') !== false) return $this->get_fallback_categories();
-        return ['error' => 'No se pudo conectar con la API de Kick.com'];
+    public function get_followed_streams($user_id = null) {
+        if (empty($this->auth_token)) {
+            return [
+                'error' => 'Token de autenticación requerido',
+                'data' => $this->get_fallback_followed_streams()['data']
+            ];
+        }
+        
+        $endpoint = 'channels/followed';
+        if ($user_id) {
+            $endpoint .= '/' . intval($user_id);
+        }
+        
+        $result = $this->make_request($endpoint, [], 180);
+        
+        if (isset($result['data']) && is_array($result['data'])) {
+            $result['data'] = array_map([$this, 'format_stream'], $result['data']);
+        }
+        
+        return $result;
     }
-    private function get_fallback_followed_streams() { /* igual que tu versión */ }
-    private function get_fallback_featured_streams() { /* igual que tu versión */ }
-    private function get_fallback_streamer_data($username) { /* igual que tu versión */ }
-    private function get_fallback_categories() { /* igual que tu versión */ }
+
+    /** Fallback data methods */
+    private function get_fallback_data($endpoint) {
+        if (strpos($endpoint, 'followed') !== false) {
+            return $this->get_fallback_followed_streams();
+        }
+        if (strpos($endpoint, 'livestreams') !== false) {
+            return $this->get_fallback_featured_streams();
+        }
+        if (strpos($endpoint, 'categories') !== false) {
+            return $this->get_fallback_categories();
+        }
+        
+        return ['error' => 'No se pudo conectar con la API de Kick.com', 'data' => []];
+    }
+
+    private function get_fallback_featured_streams() {
+        return [
+            'data' => [
+                [
+                    'username' => 'Demo Stream 1',
+                    'channel_url' => 'https://kick.com/',
+                    'thumbnail' => 'https://via.placeholder.com/320x180?text=Demo+Stream+1',
+                    'title' => 'Stream de demostración 1',
+                    'viewer_count' => 1234,
+                    'category' => 'Just Chatting',
+                    'is_live' => true,
+                    'followers' => 5678
+                ],
+                [
+                    'username' => 'Demo Stream 2',
+                    'channel_url' => 'https://kick.com/',
+                    'thumbnail' => 'https://via.placeholder.com/320x180?text=Demo+Stream+2',
+                    'title' => 'Stream de demostración 2',
+                    'viewer_count' => 567,
+                    'category' => 'Gaming',
+                    'is_live' => true,
+                    'followers' => 2345
+                ]
+            ]
+        ];
+    }
+
+    private function get_fallback_followed_streams() {
+        return [
+            'data' => [
+                [
+                    'username' => 'Streamer Seguido',
+                    'channel_url' => 'https://kick.com/',
+                    'thumbnail' => 'https://via.placeholder.com/320x180?text=Followed+Stream',
+                    'title' => 'Stream de streamer seguido',
+                    'viewer_count' => 890,
+                    'category' => 'Entertainment',
+                    'is_live' => true,
+                    'followers' => 12345
+                ]
+            ]
+        ];
+    }
+
+    private function get_fallback_streamer_data($username) {
+        return [
+            'username' => $username,
+            'channel_url' => 'https://kick.com/' . $username,
+            'thumbnail' => 'https://via.placeholder.com/320x180?text=' . urlencode($username),
+            'title' => 'Canal de ' . $username,
+            'viewer_count' => 0,
+            'category' => 'Sin categoría',
+            'is_live' => false,
+            'followers' => 0
+        ];
+    }
+
+    private function get_fallback_categories() {
+        return [
+            'data' => [
+                ['id' => 1, 'name' => 'Just Chatting', 'viewers' => 50000],
+                ['id' => 2, 'name' => 'Gaming', 'viewers' => 30000],
+                ['id' => 3, 'name' => 'Music', 'viewers' => 15000],
+                ['id' => 4, 'name' => 'Entertainment', 'viewers' => 12000],
+                ['id' => 5, 'name' => 'IRL', 'viewers' => 8000]
+            ]
+        ];
+    }
 
     /** Token y utilidades */
     public function set_auth_token($token) {
@@ -219,57 +379,70 @@ class Kick_Wp_Api {
     }
 
     public function test_connection() {
-        // Primero intentar con la API pública
-        $response = wp_remote_get('https://api.kick.com/public/v1/categories', [
-            'timeout' => 15, 
-            'headers' => $this->build_headers('minimal'), 
+        // Test básico de conectividad
+        $response = wp_remote_get('https://kick.com', [
+            'timeout' => 15,
+            'headers' => ['User-Agent' => 'WordPress/' . get_bloginfo('version')],
             'sslverify' => true
         ]);
-        
-        // Si la API pública no funciona, intentar con el sitio principal
-        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-            $response = wp_remote_get('https://kick.com', [
-                'timeout' => 15, 
-                'headers' => $this->build_headers('minimal'), 
-                'sslverify' => true
-            ]);
-        }
-        
+
         if (is_wp_error($response)) {
-            return ['success' => false, 'message' => 'Error de conexión: ' . $response->get_error_message()];
+            return [
+                'success' => false,
+                'message' => 'Error de conexión: ' . $response->get_error_message(),
+                'details' => 'No se pudo conectar con Kick.com. Verifica tu conexión a internet.'
+            ];
         }
-        
+
         $response_code = wp_remote_retrieve_response_code($response);
-        if ($response_code === 200) {
-            $api_test = $this->make_request('channels/livestreams', ['limit' => 1], 0);
-            return isset($api_test['error']) ? 
-                ['success' => true, 'message' => 'Sitio accesible, API con restricciones', 'api_working' => false] : 
-                ['success' => true, 'message' => 'Conexión exitosa', 'api_working' => true];
-        }
         
-        // Proporcionar información más detallada sobre el error HTTP
+        if ($response_code !== 200) {
+            return [
+                'success' => false,
+                'message' => 'Error HTTP: Código ' . $response_code,
+                'details' => 'Kick.com respondió con código ' . $response_code . '. El sitio puede estar temporalmente no disponible.'
+            ];
+        }
+
+        // Test de la API
+        $api_test = $this->get_featured_streams(['limit' => 1]);
+        
+        if (isset($api_test['error'])) {
+            return [
+                'success' => true,
+                'message' => 'Sitio accesible, API limitada',
+                'details' => 'Kick.com está accesible pero la API puede tener restricciones. Usando datos de demostración.',
+                'api_working' => false
+            ];
+        }
+
         return [
-            'success' => false, 
-            'message' => 'Error HTTP: Código ' . $response_code, 
-            'details' => 'La API de Kick.com respondió con un código de error ' . $response_code . '. Esto puede indicar un problema temporal con el servicio o cambios en la API.'
+            'success' => true,
+            'message' => 'Conexión exitosa con API funcional',
+            'api_working' => true
         ];
     }
 
     public function clear_cache() {
         global $wpdb;
-        $wpdb->query($wpdb->prepare(
+        
+        $deleted = $wpdb->query($wpdb->prepare(
             "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
             $wpdb->esc_like('_transient_kick_wp_') . '%',
             $wpdb->esc_like('_transient_timeout_kick_wp_') . '%'
         ));
-        return true;
+        
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
+        
+        return $deleted !== false;
     }
 
     /**
      * Verifica y refresca el token si es necesario
      */
     private function maybe_refresh_token() {
-        // Solo intentar refrescar si hay un token configurado
         if (empty($this->auth_token)) {
             return;
         }
@@ -278,13 +451,15 @@ class Kick_Wp_Api {
         
         // Si el token expira en menos de 1 hora, refrescarlo
         if (time() > ($expires - 3600)) {
-            require_once plugin_dir_path(dirname(__FILE__)) . 'includes/class-kick-wp-oauth.php';
-            $oauth = new Kick_Wp_OAuth();
-            $oauth->maybe_refresh_token();
-            
-            // Actualizar el token en esta instancia
-            $this->auth_token = get_option('kick_wp_auth_token', '');
-            $this->setup_request_args();
+            if (class_exists('Kick_Wp_OAuth')) {
+                $oauth = new Kick_Wp_OAuth();
+                $result = $oauth->maybe_refresh_token();
+                
+                if (!is_wp_error($result)) {
+                    $this->auth_token = get_option('kick_wp_auth_token', '');
+                    $this->setup_request_args();
+                }
+            }
         }
     }
 }
