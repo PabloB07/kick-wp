@@ -247,22 +247,10 @@ if (!defined('WPINC')) {
                     $client_id = get_option('kick_wp_client_id', '');
                     $client_secret = get_option('kick_wp_client_secret', '');
                     
-                    // Añadir información de depuración
-                    echo '<div class="kick-wp-debug-info" style="margin-top: 15px; padding: 10px; background: #f8f8f8; border-left: 4px solid #ccc;">';
-                    echo '<h4>Información de depuración:</h4>';
-                    echo '<p>Client ID configurado: ' . (!empty($client_id) ? 'Sí' : 'No') . '</p>';
-                    echo '<p>Client Secret configurado: ' . (!empty($client_secret) ? 'Sí' : 'No') . '</p>';
-                    echo '</div>';
-                    
                     if (!empty($client_id) && !empty($client_secret)) {
                         require_once plugin_dir_path(dirname(dirname(__FILE__))) . 'includes/class-kick-wp-oauth.php';
                         $oauth = new Kick_Wp_OAuth();
                         $auth_url = $oauth->get_auth_url();
-                        
-                        // Mostrar la URL generada para depuración
-                        echo '<div class="kick-wp-debug-info" style="margin-top: 10px; padding: 10px; background: #f8f8f8; border-left: 4px solid #ccc;">';
-                        echo '<p>URL de autenticación: ' . (empty($auth_url) ? 'No se pudo generar' : esc_url($auth_url)) . '</p>';
-                        echo '</div>';
                         
                         if ($auth_url) {
                             echo '<br><br>';
@@ -276,6 +264,12 @@ if (!defined('WPINC')) {
                             echo '</p>';
                         }
                     }
+                    
+                    // Añadir botón para limpiar caché
+                    echo '<br><br>';
+                    echo '<a href="' . esc_url(wp_nonce_url(admin_url('admin.php?page=kick-wp-settings&action=clear_cache'), 'kick_wp_clear_cache')) . '" class="button">';
+                    esc_html_e('Limpiar Caché', 'kick-wp');
+                    echo '</a>';
                     ?>
                     <p class="description">
                         <?php esc_html_e('Para obtener las credenciales de API, debes registrar una aplicación en el portal de desarrolladores de Kick.com en https://dev.kick.com', 'kick-wp'); ?>
@@ -287,9 +281,3 @@ if (!defined('WPINC')) {
         <?php submit_button(); ?>
     </form>
 </div>
-
-                    // Añadir botón para limpiar caché
-                    echo '<br><br>';
-                    echo '<a href="' . esc_url(wp_nonce_url(admin_url('admin.php?page=kick-wp-settings&action=clear_cache'), 'kick_wp_clear_cache')) . '" class="button">';
-                    esc_html_e('Limpiar Caché', 'kick-wp');
-                    echo '</a>';

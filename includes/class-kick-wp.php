@@ -93,6 +93,9 @@ class Kick_Wp {
         // Menú y configuraciones
         $this->loader->add_action('admin_menu', $plugin_admin, 'add_plugin_admin_menu');
         $this->loader->add_action('admin_init', $plugin_admin, 'register_settings');
+        
+        // Añadir el manejador de acciones administrativas
+        $this->loader->add_action('admin_init', $plugin_admin, 'handle_admin_actions');
 
         // Enlace de configuración en la lista de plugins
         if (defined('KICK_WP_FILE')) {

@@ -457,6 +457,7 @@ class Kick_Wp_Admin {
 
     // Añadir este método en la clase Kick_Wp_Admin
     public function handle_admin_actions() {
+        // Acción para limpiar caché
         if (isset($_GET['action']) && $_GET['action'] === 'clear_cache' && isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'kick_wp_clear_cache')) {
             $api = new Kick_Wp_Api();
             $api->clear_cache();
@@ -469,6 +470,24 @@ class Kick_Wp_Admin {
             );
             
             wp_redirect(admin_url('admin.php?page=kick-wp-settings&cache_cleared=1'));
+            exit;
+        }
+        
+        // Acción para revocar token
+        if (isset($_GET['action']) && $_GET['action'] === 'revoke_token' && isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'kick_wp_revoke_token')) {
+            // Eliminar opciones relacionadas con la autenticación
+            delete_option('kick_wp_auth_token');
+            delete_option('kick_wp_refresh_token');
+            delete_option('kick_wp_token_expires');
+            
+            add_settings_error(
+                'kick_wp_messages',
+                'token_revoked',
+                __('Acceso revocado correctamente.', 'kick-wp'),
+                'success'
+            );
+            
+            wp_redirect(admin_url('admin.php?page=kick-wp-settings&token_revoked=1'));
             exit;
         }
     }
